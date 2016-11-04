@@ -16,8 +16,8 @@ When dealing with a training corpus, please chunk a large corpus into smaller fi
 
 You will need to setup following parameters:
   
-  - FUNCWORD: a list of function words (an example is provided in data/)
-  - WORDLIST: a list of target polysemous words (an example is provided in data/)
+  - funcWordFile: a list of function words (an example is provided in data/)
+  - polyListFile: a list of target polysemous words (an example is provided in data/)
   - directory: a base directory
   - vocabInputFile: an input vocabulary file (an example is provided in data/)
   - vecInputFile: a binary vector file (an example is provided in data/)
