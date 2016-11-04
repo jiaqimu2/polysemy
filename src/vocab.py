@@ -36,14 +36,6 @@ logging.basicConfig(level=logging.INFO,
                     format="%(levelname)s: %(process)s - %(message)s",
                     )
 
-WORD2VEC_SCRIPT = '/projects/csl/viswanath/data/jiaqimu2/wordnet/src/word2vec/word2vec-init.sh'
-FUNCWORD = '/projects/csl/viswanath/data/jiaqimu2/wordnet/data/funcWords.txt'
-## $1 wikicorpus
-## $2 vectors.bin
-## $3 vocab.txt 
-## $4 dim
-## $5 min_count
-
 
 def cosSim(array1, array2):
 
@@ -79,31 +71,22 @@ def cosSimSubspace(array1, arrayList):
 
 class Vocab:
 
-	def __init__(self, vecDim, directory, corpusDir, corpusName,
-		               vocabInputFile, vectorInputFile, debug, isFunctional):
+	def __init__(self, vecDim, directory, corpusPath, corpusName,
+		               vocabInputFile, vectorInputFile, debug, funcWordFile):
 
 		self.vecDim = vecDim
-		self.corpusDir = directory + corpusDir
+		self.corpusPath = directory + corpusPath
 		self.corpusName = directory + corpusName
 		self.vocabFile = directory + vocabInputFile
 		self.vecFile = directory + vectorInputFile
 		self.debug = debug
-
-		# if not (os.path.isfile(self.vocabFile) and os.path.isfile(self.vecFile)):
-		# 	os.system('rm -r %s' % self.corpusName)
-		# 	os.system('for file in %s*/*; do; cat $file >> %s; done' % (self.corpusDir, self.corpusName))
-		# 	if debug:
-		# 		os.system('%s %s %s %s %d 1000' % (WORD2VEC_SCRIPT, self.corpusName, self.vecFile, self.vocabFile, self.vecDim))
-		# 	else:
-		# 		os.system('%s %s %s %s %d 100' % (WORD2VEC_SCRIPT, self.corpusName, self.vecFile, self.vocabFile, self.vecDim))
-
-
+		
 		self.readVocabFromFile()
 		self.readVectorFromFile()
-		self.readFuncWords(isFunctional)
+		self.readFuncWords(funcWordFile)
 
 		if debug:
-			self.sem = multiprocessing.BoundedSemaphore(2)
+			self.sem = multiprocessing.BoundedSemaphore(1)
 		else:
 			self.sem = multiprocessing.BoundedSemaphore(multiprocessing.cpu_count() - 1)
 
@@ -112,10 +95,10 @@ class Vocab:
 		self.pcaRank = pcaRank
 		self.window = window
 
-	def readFuncWords(self, isFunctional):
+	def readFuncWords(self, funcWordFile = ''):
 		funcWords = set()
-		if isFunctional:
-			f = open(FUNCWORD, 'r')
+		if funcWordFile:
+			f = open(funcWordFile, 'r')
 			for line in f.readlines():
 				funcWords.add(line.rstrip())
 
@@ -162,7 +145,7 @@ class Vocab:
 	###################################################
 	## induction
 
-	def computeSenseVecFromContexts(self, contexts, vecFile, 
+	def computeSenseVecFromContexts(self, contexts, polysemy, vecFile, 
 								    pcaRank, window, contextSize, adapt, maxSenNum, kmeansIterMax):
 
 		################
@@ -178,8 +161,9 @@ class Vocab:
 		contextList = self.getContextIdList(contexts)
 		
 		vec = self.kMeansSubspace(contextList)
-		print vecFile
-		cPickle.dump(vec, open(vecFile, 'wb'))
+		polySet = ['.%d' % (val+1) for val in xrange(len(vec))] + ['.0']
+
+		cPickle.dump([polysemy, polySet, vec], open(vecFile, 'wb'))
 
 		return vec
 
@@ -223,10 +207,10 @@ class Vocab:
 		return contextList
 
 
-	def computeSenseVecs(self, polyList, digitCorpusDir, algoDir, preDir, \
+	def computeSenseVecs(self, polyList, digitCorpusPath, algoPath, prePath, \
 					       	   pcaRank, window, contextSize, adapt, maxSenNum, kmeansIterMax):
 
-		self.digitalizeCorpus(digitCorpusDir)
+		self.digitalizeCorpus(digitCorpusPath)
 
 		################
 		# parameters
@@ -236,12 +220,12 @@ class Vocab:
 		self.adapt = adapt
 		self.maxSenNum = maxSenNum
 		self.kmeansIterMax = kmeansIterMax
-		self.algoDir = algoDir
-		self.preDir = preDir
+		self.algoPath = algoPath
+		self.prePath = prePath
 
-		os.system('mkdir -p %s' % algoDir + 'vecs/')
-		os.system('mkdir -p %s' % algoDir + 'figures/')
-		os.system('mkdir -p %s' % algoDir + 'texts/')
+		os.system('mkdir -p %s' % algoPath + 'vecs/')
+		os.system('mkdir -p %s' % algoPath + 'figures/')
+		os.system('mkdir -p %s' % algoPath + 'texts/')
 		#####################
 
 
@@ -264,7 +248,7 @@ class Vocab:
 		self.digitCorpus = digitCorpus
 		start = time.clock()
 		count = 0
-		corpus = self.corpusDir
+		corpus = self.corpusPath
 
 		for fdir in os.listdir(corpus):
 
@@ -417,7 +401,7 @@ class Vocab:
 		threads = []
 		start = time.clock()
 		for i in xrange(len(contextList)):
-			
+
 			t = threading.Thread(target = self.pcaContexts, args = (contextList[i], i, contextVecs))
 			t.start()
 			threads.append(t)
@@ -549,8 +533,8 @@ class Vocab:
 	def findContexts(self, polysemy):
 
 		start = time.clock()
-		figFile = self.algoDir + 'figures/'+polysemy+'.pdf'
-		vecFile = self.algoDir + 'vecs/'+polysemy+'.bin'
+		figFile = self.algoPath + 'figures/'+polysemy+'.pdf'
+		vecFile = self.algoPath + 'vecs/'+polysemy+'.bin'
 
 		if isfile(vecFile):
 			logging.info('%s exists.' % (polysemy,))
@@ -559,8 +543,8 @@ class Vocab:
 
 		logging.info( "starting %s" % (polysemy))
 
-		if isfile(self.preDir + 'vecs/' + polysemy + '.bin'):
-			_, prePolySet, _ = cPickle.load(open(self.preDir + 'vecs/' + polysemy + '.bin', 'r'))
+		if isfile(self.prePath + 'vecs/' + polysemy + '.bin'):
+			_, prePolySet, _ = cPickle.load(open(self.prePath + 'vecs/' + polysemy + '.bin', 'r'))
 		else:
 			prePolySet = list()
 
@@ -699,7 +683,7 @@ class Vocab:
 	#####################################
 	# labeling corpus
 
-	def processCorpus(self, polyList, outDirectory, corpusDir, corpusName, decoding):
+	def processCorpus(self, polyList, outPathectory, corpusPath, corpusName, decoding):
 
 		wordList = list()
 		senseVecs = list()
@@ -708,8 +692,8 @@ class Vocab:
 		print >>sys.stdout, 'Start labeling corpus.'
 
 		for poly in polyList:
-			if os.path.isfile(self.algoDir + 'vecs/' + poly + '.bin'):
-				f = open(self.algoDir + 'vecs/' + poly + '.bin', 'rb')
+			if os.path.isfile(self.algoPath + 'vecs/' + poly + '.bin'):
+				f = open(self.algoPath + 'vecs/' + poly + '.bin', 'rb')
 			else:
 				continue
 			polysemy, polySet, polyVecs = cPickle.load(f)
@@ -724,8 +708,8 @@ class Vocab:
 
 		count = 0
 		processes = []
-		inCorpus = self.corpusDir
-		outCorpus = outDirectory + corpusDir
+		inCorpus = self.corpusPath
+		outCorpus = outPathectory + corpusPath
 		# os.system('rm -rf '+curCorpus)
 
 		for fdir in os.listdir(inCorpus):
@@ -837,28 +821,3 @@ class Vocab:
 		logging.info('Time: %f' % (end-start))
 
 		self.sem.release()
-
-
-if __name__ == "__main__":
-
-	parser = argparse.ArgumentParser()
-	parser.add_argument('--debug', default=1, type=int)
-	parser.add_argument('--normalize', default=0, type=int)
-	parser.add_argument('--dirBase', default='/projects/csl/viswanath/data/jiaqimu2/wordnet/data/non-functional/post/', type=str)
-	parser.add_argument('--maxSenNum', default=5, type=int)
-	parser.add_argument('--maxIter', default=1, type=int)
-	parser.add_argument('--refresh', default=0, type=int)
-	parser.add_argument('--iterNum', default=1, type=int)
-	parser.add_argument('--adapt', default=0, type=int)
-	parser.add_argument('--primary', default=0, type=int)
-	args = parser.parse_args()
-
-	funWordsFile = '/projects/csl/viswanath/data/jiaqimu2/wordnet/data/funcWords.txt'
-
-	# vocab = Vocab(vecDim, directory, corpusDir, corpusName, vocabInputFile, vecInputFile, debug, funWordsFile)
-	vocab = Vocab(300, args.dirBase, 'corpus/', 'wikiCorpus.txt', 'vocab.txt', 'vectors.bin', True, funWordsFile)
-	polyList = vocab.vocabList[0:500]
-	# vocab.computeSenseVecs(polyList, digitCorpusDir, algoDir, '', 
-	# 				       pcaRank, window, contextSize, adapt, maxSenNum, kmeansIterMax)
-	vocab.computeSenseVecs(polyList, 'digitCorpus/', args.dirBase + 'kGrassMean/senNum-%d/' % args.maxSenNum, '',
-						   4, 10, 10000, False, args.maxSenNum, 100)
