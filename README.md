@@ -6,6 +6,11 @@ In src/, we provide three scripts:
   - induction.py: to get intersections for word sense induction directly from corpus.
   - induction-from-file.py: to get intersections for word sense induction from a given set of sentences.
   - representation.py: to generate a labeled corpus.
+
+We provide three demos to try:
+  - demo-induction.sh
+  - demo-induction-from-file.sh
+  - demo-representation.sh
   
 When dealing with a training corpus, please chunk a large corpus into smaller files to avoid memory overflow. 
 
@@ -16,5 +21,5 @@ You will need to setup following parameters:
   - directory: a base directory
   - vocabInputFile: an input vocabulary file (an example is provided in data/)
   - vecInputFile: a binary vector file (an example is provided in data/)
-  - corpusDir: a directory to chunked corpus (an example is provided in data/)
-  - algoDir: an output directory
+  - corpusPath: a directory to chunked corpus (an example is provided in data/)
+  - algoPath: an output directory
