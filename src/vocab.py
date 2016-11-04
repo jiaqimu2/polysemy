@@ -146,21 +146,20 @@ class Vocab:
 	## induction
 
 	def computeSenseVecFromContexts(self, contexts, polysemy, vecFile, 
-								    pcaRank, window, contextSize, adapt, maxSenNum, kmeansIterMax):
+								    pcaRank, window, contextSize, maxSenNum, kmeansIterMax):
 
 		################
 		# parameters
 		self.pcaRank = pcaRank
 		self.window = window
 		self.contextSize = contextSize
-		self.adapt = adapt
 		self.maxSenNum = maxSenNum
 		self.kmeansIterMax = kmeansIterMax
 		#####################
 
 		contextList = self.getContextIdList(contexts)
 		
-		vec = self.kMeansSubspace(contextList)
+		vec = self.kGrassmeans(contextList)
 		polySet = ['.%d' % (val+1) for val in xrange(len(vec))] + ['.0']
 
 		cPickle.dump([polysemy, polySet, vec], open(vecFile, 'wb'))
@@ -208,7 +207,7 @@ class Vocab:
 
 
 	def computeSenseVecs(self, polyList, digitCorpusPath, algoPath, prePath, \
-					       	   pcaRank, window, contextSize, adapt, maxSenNum, kmeansIterMax):
+					       	   pcaRank, window, contextSize, maxSenNum, kmeansIterMax):
 
 		self.digitalizeCorpus(digitCorpusPath)
 
@@ -217,7 +216,6 @@ class Vocab:
 		self.pcaRank = pcaRank
 		self.window = window
 		self.contextSize = contextSize
-		self.adapt = adapt
 		self.maxSenNum = maxSenNum
 		self.kmeansIterMax = kmeansIterMax
 		self.algoPath = algoPath
@@ -375,7 +373,7 @@ class Vocab:
 		pca.fit(contexts)
 		return pca.components_[0]
 
-	def kMeansSubspace(self, contextList, figFile=None, ):
+	def kGrassmeans(self, contextList, figFile=None, ):
 
 		'''
 		input: list of context indices
@@ -385,7 +383,6 @@ class Vocab:
 		pcaRank = self.pcaRank
 		contextSize = self.contextSize
 		vecDim = self.vecDim
-		adapt = self.adapt
 		maxSenNum = self.maxSenNum
 		kmeansIterMax = self.kmeansIterMax
 
@@ -413,10 +410,7 @@ class Vocab:
 
 		logging.info("Analysing Context Time: %f" % (end - start))
 
-		if adapt:
-			recur = xrange(1, maxSenNum+1)
-		else:
-			recur = [maxSenNum]
+		recur = [maxSenNum]
 
 		sample, rank, dim = contextVecs.shape
 		fig, ax = plt.subplots(len(recur), 2, figsize=((7, 3*len(recur))))
@@ -562,7 +556,7 @@ class Vocab:
 		for key, contextList in contextListSet.iteritems():
 			if len(contextList) == 0:
 				continue
-			tempSenseVecs = self.kMeansSubspace(contextList, figFile)
+			tempSenseVecs = self.kGrassmeans(contextList, figFile)
 			for i in xrange(len(tempSenseVecs)):
 				senseVecs.append(tempSenseVecs[i])
 			count += 1

@@ -81,7 +81,6 @@ if __name__ == '__main__':
 	parser.add_argument('--maxIter', default=1, type=int)
 	parser.add_argument('--refresh', default=0, type=int)
 	parser.add_argument('--iterNum', default=1, type=int)
-	parser.add_argument('--adapt', default=0, type=int)
 	parser.add_argument('--pcaRank', default=3, type=int)
 	parser.add_argument('--vecDim', default=300, type=int)
 	parser.add_argument('--primary', default=0, type=int)
@@ -93,7 +92,6 @@ if __name__ == '__main__':
 	# parameters
 	vecDim = args.vecDim
 	debug = (args.debug == 1)
-	adapt = (args.adapt == 1)
 	funcWordFile = args.funcWordFile
 	directory = args.directory
 	maxSenNum = args.maxSenNum
@@ -114,7 +112,7 @@ if __name__ == '__main__':
 	vocab = Vocab(vecDim, directory, corpusPath, corpusName, vocabInputFile, vecInputFile, debug, funcWordFile)
 	polyList = open(polyListFile, 'r').read().split()
 	vocab.computeSenseVecs(np.random.permutation((polyList)), digitCorpusPath, algoPath, '', 
-					       pcaRank, window, contextSize, adapt, maxSenNum, kmeansIterMax)
+					       pcaRank, window, contextSize, maxSenNum, kmeansIterMax)
 
 
 	## generate sentences
